@@ -38,8 +38,8 @@ def setup_logger(name: str = "FolioExtract") -> logging.Logger:
             fh.setLevel(logging.INFO)
             fh.setFormatter(formatter)
             logger.addHandler(fh)
-        except Exception:
-            pass
+        except Exception as exc:
+            print(f"[FolioExtract] WARNING: Could not set up file logger: {exc}", file=sys.stderr, flush=True)
         
     return logger
 

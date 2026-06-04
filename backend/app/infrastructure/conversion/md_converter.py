@@ -1,9 +1,12 @@
 import os
 import re
 import shutil
+import threading
 from pathlib import Path
 
 from backend.app.infrastructure.common.file_helpers import ensure_dir
+
+_chdir_lock = threading.Lock()
 from backend.app.infrastructure.conversion.base_converter import BaseConverter, ConversionResult
 from backend.app.infrastructure.conversion.exceptions import ConversionError, CorruptedPdfError
 from backend.app.infrastructure.conversion.structured_pdf_extractor import try_docling_markdown
@@ -116,41 +119,47 @@ class MarkdownConverter(BaseConverter):
             shutil.copy2(source, temp_source_path)
             temp_source_ref = str(temp_source_path)
 
-            os.chdir(str(out_dir))
-            ensure_dir(images_dir)
-            if hasattr(pymupdf4llm, "use_layout"):
-                pymupdf4llm.use_layout(False)
-            elif hasattr(pymupdf4llm, "_use_layout"):
-                pymupdf4llm._use_layout = False
-
+            # Adquirir lock solo para la sección que usa os.chdir()
+            _chdir_lock.acquire()
             try:
-                md_text = pymupdf4llm.to_markdown(
-                    doc=temp_source_ref,
-                    write_images=True,
-                    image_path=images_dir.name,
-                    image_format="png",
-                    margins=(0, 50, 0, 50),
-                    dpi=220,
-                )
-            except Exception as image_error:
-                if not _looks_like_image_export_failure(image_error):
-                    raise
-                logger.error(
-                    "markdown_image_export_failed_retrying_without_images",
-                    extra={
-                        "event": "markdown_image_export_failed_retrying_without_images",
-                        "file": source.name,
-                        "converter": ".md",
-                        "error": str(image_error),
-                    },
-                )
-                md_text = pymupdf4llm.to_markdown(
-                    doc=temp_source_ref,
-                    write_images=False,
-                    image_format="png",
-                    margins=(0, 50, 0, 50),
-                    dpi=220,
-                )
+                os.chdir(str(out_dir))
+                ensure_dir(images_dir)
+                if hasattr(pymupdf4llm, "use_layout"):
+                    pymupdf4llm.use_layout(False)
+                elif hasattr(pymupdf4llm, "_use_layout"):
+                    pymupdf4llm._use_layout = False
+
+                try:
+                    md_text = pymupdf4llm.to_markdown(
+                        doc=temp_source_ref,
+                        write_images=True,
+                        image_path=images_dir.name,
+                        image_format="png",
+                        margins=(0, 50, 0, 50),
+                        dpi=220,
+                    )
+                except Exception as image_error:
+                    if not _looks_like_image_export_failure(image_error):
+                        raise
+                    logger.error(
+                        "markdown_image_export_failed_retrying_without_images",
+                        extra={
+                            "event": "markdown_image_export_failed_retrying_without_images",
+                            "file": source.name,
+                            "converter": ".md",
+                            "error": str(image_error),
+                        },
+                    )
+                    md_text = pymupdf4llm.to_markdown(
+                        doc=temp_source_ref,
+                        write_images=False,
+                        image_format="png",
+                        margins=(0, 50, 0, 50),
+                        dpi=220,
+                    )
+            finally:
+                os.chdir(old_cwd)
+                _chdir_lock.release()
             
             # 1. Clean invisible Unicode characters (U+200B, etc.)
             md_text = clean_text(md_text)
@@ -167,8 +176,6 @@ class MarkdownConverter(BaseConverter):
             return ConversionResult(success=True, output_path=destination, pages_processed=num_pages)
         except Exception as e:
             raise ConversionError(f"Error al convertir a Markdown: {str(e)}")
-        finally:
-            os.chdir(old_cwd)
             if temp_source_path is not None:
                 try:
                     temp_source_path.unlink(missing_ok=True)

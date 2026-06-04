@@ -55,6 +55,12 @@ class DocxConverter(BaseConverter):
     def _ps_quote(value: str) -> str:
         return "'" + value.replace("'", "''") + "'"
 
+    @staticmethod
+    def _validate_path_for_powershell(path: str) -> None:
+        """Validate that path doesn't contain characters that could be exploited in PowerShell."""
+        if any(char in path for char in ['`', '$', '(', ')', '{', '}', '[', ']', ';', '&', '|', '<', '>', "'", '"', '\n', '\r']):
+            raise ValueError(f"Path contains potentially dangerous characters for PowerShell: {path}")
+
     def _convert_with_word_automation(self, source: Path, destination: Path) -> tuple[bool, str]:
         if os.name != "nt":
             return False, "Word automation solo esta disponible en Windows."
@@ -68,6 +74,8 @@ class DocxConverter(BaseConverter):
 
         source_path = str(source.resolve())
         destination_path = str(destination.resolve())
+        self._validate_path_for_powershell(source_path)
+        self._validate_path_for_powershell(destination_path)
 
         script = f"""
 $ErrorActionPreference = 'Stop'

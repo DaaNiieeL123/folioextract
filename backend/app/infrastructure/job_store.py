@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 import json
+import logging
 from pathlib import Path
 from threading import Lock
 from time import time
 from typing import Any
+
+_logger = logging.getLogger("FolioExtract")
 
 
 class FileJobStore:
@@ -202,10 +205,9 @@ class FileJobStore:
             if isinstance(data, list):
                 return data
             return []
-        except Exception:
+        except Exception as exc:
+            _logger.warning("Failed to read jobs from %s: %s", self._path, exc)
             return []
 
     def _write_all(self, jobs: list[dict[str, Any]]) -> None:
         self._path.write_text(json.dumps(jobs, ensure_ascii=True, indent=2), encoding="utf-8")
-
-

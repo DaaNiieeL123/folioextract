@@ -17,8 +17,8 @@ class AppSettings:
                     valid_keys = cls.__dataclass_fields__.keys()
                     filtered_data = {k: v for k, v in data.items() if k in valid_keys}
                     return cls(**filtered_data)
-        except Exception:
-            pass # Return default if corrupted
+        except Exception as exc:
+            warnings.warn(f"Failed to load settings from {path}: {exc}")
         return cls()
         
     def save(self, path: Path) -> None:

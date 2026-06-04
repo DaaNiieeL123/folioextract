@@ -1,0 +1,13 @@
+services:
+  backend:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - folioextract-data:/app/data
+    environment:
+      - FOLIOEXTRACT_HOME=/app/data
+    restart: unless-stopped
+
+volumes:
+  folioextract-data:

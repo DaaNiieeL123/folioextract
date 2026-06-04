@@ -28,6 +28,8 @@ from backend.app.application.batch_service import BatchService
 from backend.app.infrastructure.common.logger import logger
 from backend.app.infrastructure.common.file_helpers import get_unique_filename
 
+__version__ = "0.1.0"
+
 
 @dataclass
 class JobEventStream:
@@ -386,6 +388,11 @@ def create_app() -> FastAPI:
     @app.post("/api/convert/upload")
     async def start_upload_conversion(request: Request):
         _ensure_multipart_support()
+        content_length = int(request.headers.get("content-length", "0"))
+        if content_length > _MAX_UPLOAD_SIZE:
+            raise ValidationError(
+                f"El tamano total de los archivos excede el limite maximo de {_MAX_UPLOAD_SIZE // (1024*1024)} MB"
+            )
         try:
             form = await request.form()
         except (RuntimeError, AssertionError) as exc:
