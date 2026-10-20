@@ -37,7 +37,7 @@ Extract and convert PDF content to editable formats: Markdown, TXT, and DOCX
 
 ```bash
 # Clone the repository
-git clone https://github.com/YOUR_USERNAME/folioextract.git
+git clone https://github.com/DaaNiieeL123/folioextract.git
 cd folioextract
 
 # Install backend dependencies
@@ -235,7 +235,7 @@ See [`SECURITY.md`](SECURITY.md) for vulnerability reporting guidelines.
 
 ```bash
 # Clonar el repositorio
-git clone https://github.com/YOUR_USERNAME/folioextract.git
+git clone https://github.com/DaaNiieeL123/folioextract.git
 cd folioextract
 
 # Instalar dependencias del backend
